@@ -1,0 +1,190 @@
+<html>
+<head>
+    <title>Test task</title>
+    <style>
+        th {
+            min-width: 200px;
+        }
+    </style>
+</head>
+
+<body>
+
+<div>
+    <h1>1 minute</h1>
+    <table>
+        <tr>
+            <th>Token</th>
+            <th>Amount</th>
+            <th>Amount (USD)</th>
+            <th>Transactions</th>
+        </tr>
+        <tr>
+            <td>BTC</td>
+            <td id="BTC_1min_amount">0</td>
+            <td id="BTC_1min_amount_usd">0</td>
+            <td id="BTC_1min_tx_count">0</td>
+        </tr>
+        <tr>
+            <td>ETH</td>
+            <td id="ETH_1min_amount">0</td>
+            <td id="ETH_1min_amount_usd">0</td>
+            <td id="ETH_1min_tx_count">0</td>
+        </tr>
+        <tr>
+            <td>KOL</td>
+            <td id="KOL_1min_amount">0</td>
+            <td id="KOL_1min_amount_usd">0</td>
+            <td id="KOL_1min_tx_count">0</td>
+        </tr>
+    </table>
+</div>
+
+<div>
+    <h1>5 minutes</h1>
+    <table>
+        <tr>
+            <th>Token</th>
+            <th>Amount</th>
+            <th>Amount (USD)</th>
+            <th>Transactions</th>
+        </tr>
+        <tr>
+            <td>BTC</td>
+            <td id="BTC_5min_amount">0</td>
+            <td id="BTC_5min_amount_usd">0</td>
+            <td id="BTC_5min_tx_count">0</td>
+        </tr>
+        <tr>
+            <td>ETH</td>
+            <td id="ETH_5min_amount">0</td>
+            <td id="ETH_5min_amount_usd">0</td>
+            <td id="ETH_5min_tx_count">0</td>
+        </tr>
+        <tr>
+            <td>KOL</td>
+            <td id="KOL_5min_amount">0</td>
+            <td id="KOL_5min_amount_usd">0</td>
+            <td id="KOL_5min_tx_count">0</td>
+        </tr>
+    </table>
+</div>
+
+
+<div>
+    <h1>1 hour</h1>
+    <table>
+        <tr>
+            <th>Token</th>
+            <th>Amount</th>
+            <th>Amount (USD)</th>
+            <th>Transactions</th>
+        </tr>
+        <tr>
+            <td>BTC</td>
+            <td id="BTC_1h_amount">0</td>
+            <td id="BTC_1h_amount_usd">0</td>
+            <td id="BTC_1h_tx_count">0</td>
+        </tr>
+        <tr>
+            <td>ETH</td>
+            <td id="ETH_1h_amount">0</td>
+            <td id="ETH_1h_amount_usd">0</td>
+            <td id="ETH_1h_tx_count">0</td>
+        </tr>
+        <tr>
+            <td>KOL</td>
+            <td id="KOL_1h_amount">0</td>
+            <td id="KOL_1h_amount_usd">0</td>
+            <td id="KOL_1h_tx_count">0</td>
+        </tr>
+    </table>
+</div>
+
+<div>
+    <h1>24 hours</h1>
+    <table>
+        <tr>
+            <th>Token</th>
+            <th>Amount</th>
+            <th>Amount (USD)</th>
+            <th>Transactions</th>
+        </tr>
+        <tr>
+            <td>BTC</td>
+            <td id="BTC_24h_amount">0</td>
+            <td id="BTC_24h_amount_usd">0</td>
+            <td id="BTC_24h_tx_count">0</td>
+        </tr>
+        <tr>
+            <td>ETH</td>
+            <td id="ETH_24h_amount">0</td>
+            <td id="ETH_24h_amount_usd">0</td>
+            <td id="ETH_24h_tx_count">0</td>
+        </tr>
+        <tr>
+            <td>KOL</td>
+            <td id="KOL_24h_amount">0</td>
+            <td id="KOL_24h_amount_usd">0</td>
+            <td id="KOL_24h_tx_count">0</td>
+        </tr>
+    </table>
+</div>
+
+<div>
+    <h1>Updated at: <span id="updated">Unknown</span></h1>
+</div>
+
+</body>
+
+<script>
+    function connect() {
+        let ws = new WebSocket('ws://127.0.0.1:8085/ws');
+
+        ws.onclose = function (e) {
+            console.log('Socket is closed. Reconnect will be attempted in 1 second.', e.reason);
+            setTimeout(function () {
+                connect();
+            }, 1000);
+        };
+
+        ws.onerror = function (err) {
+            console.error('Socket encountered error: ', err, 'Closing socket');
+            ws.close();
+        };
+
+        ws.onmessage = function (e) {
+            e
+            try {
+                // console.log("received: ", e.data);
+                const data = JSON.parse(e.data);
+
+                document.getElementById("updated").innerText = data.timestamp;
+
+                for (var stat of data.by_token) {
+                    document.getElementById(stat.token + "_1min_amount").innerText = stat.w1m.volume;
+                    document.getElementById(stat.token + "_1min_amount_usd").innerText = stat.w1m.volume_usd;
+                    document.getElementById(stat.token + "_1min_tx_count").innerText = stat.w1m.tx_count;
+
+                    document.getElementById(stat.token + "_5min_amount").innerText = stat.w5m.volume;
+                    document.getElementById(stat.token + "_5min_amount_usd").innerText = stat.w5m.volume_usd;
+                    document.getElementById(stat.token + "_5min_tx_count").innerText = stat.w5m.tx_count;
+
+                    document.getElementById(stat.token + "_1h_amount").innerText = stat.w1h.volume;
+                    document.getElementById(stat.token + "_1h_amount_usd").innerText = stat.w1h.volume_usd;
+                    document.getElementById(stat.token + "_1h_tx_count").innerText = stat.w1h.tx_count;
+
+                    document.getElementById(stat.token + "_24h_amount").innerText = stat.w24h.volume;
+                    document.getElementById(stat.token + "_24h_amount_usd").innerText = stat.w24h.volume_usd;
+                    document.getElementById(stat.token + "_24h_tx_count").innerText = stat.w24h.tx_count;
+                }
+            } catch (error) {
+                console.error("error:", error);
+            }
+        };
+    }
+
+    connect();
+
+</script>
+</html>

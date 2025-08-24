@@ -1,0 +1,8 @@
+.dockerignore
+.git
+.gitignore
+.idea
+Dockerfile
+docker-compose.yml
+*.csv
+coverage.out
