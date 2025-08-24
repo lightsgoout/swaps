@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -36,6 +37,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", index)
+	mux.HandleFunc("/stats", stats(victoria))
 	mux.HandleFunc("/ws", ws(ctx, time.Duration(*updIntervalMs)*time.Millisecond, victoria))
 
 	srv := http.Server{
@@ -61,6 +63,23 @@ func index(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func stats(victoria Victoria) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		st, err := getStats(r.Context(), victoria)
+		if err != nil {
+			log.Printf("vm get stats: %s\n", err.Error())
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		enc := json.NewEncoder(w)
+		if err := enc.Encode(&st); err != nil {
+			log.Printf("json encode: %s", err.Error())
+		}
+	}
+}
+
 func ws(ctx context.Context, upd time.Duration, victoria Victoria) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
@@ -83,19 +102,12 @@ func ws(ctx context.Context, upd time.Duration, victoria Victoria) func(http.Res
 					deadline, cancel := context.WithTimeout(ctx, 1*time.Second)
 					defer cancel()
 
-					now := time.Now()
-					stats := Stats{
-						Timestamp: now.Format(time.StampMilli),
+					st, err := getStats(deadline, victoria)
+					if err != nil {
+						log.Printf("vm get stats: %s\n", err.Error())
+						return
 					}
-					for _, token := range []string{"BTC", "ETH", "KOL"} {
-						st, err := getStats(deadline, token, victoria)
-						if err != nil {
-							log.Printf("vm get stats(%s): %s\n", token, err.Error())
-							continue
-						}
-						stats.ByToken = append(stats.ByToken, st)
-					}
-					if err := conn.WriteJSON(&stats); err != nil {
+					if err := conn.WriteJSON(&st); err != nil {
 						log.Printf("(probably dead conn) ws wire: %s\n", err.Error())
 						loop = false
 						tick.Stop()
@@ -110,7 +122,22 @@ type Victoria interface {
 	GetWindow(ctx context.Context, token string, interval string) (vm.Window, error)
 }
 
-func getStats(ctx context.Context, token string, vm Victoria) (TokenStats, error) {
+func getStats(ctx context.Context, victoria Victoria) (Stats, error) {
+	now := time.Now()
+	st := Stats{
+		Timestamp: now.Format(time.StampMilli),
+	}
+	for _, token := range []string{"BTC", "ETH", "KOL"} {
+		tokenStats, err := getTokenStats(ctx, token, victoria)
+		if err != nil {
+			return Stats{}, fmt.Errorf("getTokenStats: %w", err)
+		}
+		st.ByToken = append(st.ByToken, tokenStats)
+	}
+	return st, nil
+}
+
+func getTokenStats(ctx context.Context, token string, vm Victoria) (TokenStats, error) {
 	w1m, err := vm.GetWindow(ctx, token, "1m")
 	if err != nil {
 		return TokenStats{}, fmt.Errorf("w1m: %w", err)

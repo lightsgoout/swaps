@@ -33,7 +33,7 @@ services:
       - docker-compose.env
     build:
       context: .
-    entrypoint: [ "/go/bin/swapper-worker", "-wait", "15"]
+    entrypoint: [ "/go/bin/swapper-worker", "-wait", "10"]
 
   api:
     depends_on:

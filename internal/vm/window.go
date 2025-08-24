@@ -56,6 +56,14 @@ func (vm *VM) runQuery(ctx context.Context, query string) (string, error) {
 		return "", fmt.Errorf("vm error response")
 	}
 
+	if len(qr.Data.Result) == 0 {
+		return "", nil
+	}
+
+	if len(qr.Data.Result[0].Values) == 0 {
+		return "", nil
+	}
+
 	raw, ok := qr.Data.Result[0].Values[0][1].(string)
 	if !ok {
 		return "", fmt.Errorf("vm schema mismatch")
